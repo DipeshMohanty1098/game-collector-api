@@ -1,6 +1,7 @@
 const Game = require('../models/game')
 const { ObjectId } = require('mongodb')
 const middleware = require('../middleware');
+const mongoose = require('mongoose');
 const cors = require("cors");
 
 module.exports = (app) => {
@@ -16,11 +17,14 @@ module.exports = (app) => {
                 res.json({ error: 'could not fetch' })
             });
     })
+
     app.get('/games/:id', (req, res) => {
         console.log(req.params.id)
-        if (ObjectId.isValid(req.params.id)) {
-            Game.findById(req.params.id)
+        var id = new mongoose.Types.ObjectId(req.params.id);
+        if (ObjectId.isValid(id)) {
+            Game.findById(id)
                 .then((result) => {
+                    console.log(result)
                     res.status(200).json(result)
                 }).catch((error) => {
                     console.log(error)
@@ -36,13 +40,15 @@ module.exports = (app) => {
         console.log("Page Number: " + req.query.p)
         console.log("Tag: " + req.query.tags)
         var tags = req.query.tags
-        var title = req.query.title
+        var title = `\"${req.query.title.trim()}\"`
+        console.log("New title: " + title)
         var pageNumber = req.query.p
         const limit = 5
         Game.find({$and: [
             {tags: tags},
-            {$text: {$search: title}}
-        ]}).skip(pageNumber*limit)
+            {$text:{$search: title}}
+        ]})
+        .skip(pageNumber*limit)
         .limit(limit)
         .then((data) => {
             res.status(200).json(data)
@@ -56,3 +62,20 @@ module.exports = (app) => {
 
     return app;
 };
+
+/*
+Game.find({$and: [
+    {tags: tags},
+    {$text: {$search: title}}
+]})
+.skip(pageNumber*limit)
+.limit(limit)
+.then((data) => {
+    res.status(200).json(data)
+    console.log(data.length)
+})
+.catch((error) => {
+    console.log(error)
+    res.status(550).json({error: 'Could not fetch'})
+})
+*/
